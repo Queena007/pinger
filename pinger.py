@@ -1,3 +1,5 @@
+How to fix the problem "Test Failed: could not convert string to float: 'Request timed out.'" of python program of the following: 
+
 from socket import *
 import os
 import sys
@@ -84,6 +86,8 @@ def sendOnePing(mySocket, destAddr, ID):
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
 
+
+
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
@@ -95,7 +99,7 @@ def doOnePing(destAddr, timeout):
     sendOnePing(mySocket, destAddr, myID)
     delay = receiveOnePing(mySocket, myID, timeout, destAddr)
     mySocket.close()
-    return delay
+    return delay if isinstance(delay, float) else -1
 
 def ping(host, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,  
@@ -113,7 +117,6 @@ def ping(host, timeout=1):
         delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
         ttl += 1
      
-
         if delay == -1:
             print("Request timed out.")
         else:
@@ -137,6 +140,9 @@ def ping(host, timeout=1):
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
     
+    valid_responses = response[response['rtt'] > 0] #filter out timeouts
+  
+
     if len(response) > 0:
         vars = vars.append({'min': round(float(response['rtt'].min()), 2), 'avg': round(float(response['rtt'].mean()), 2),'max': round(float(response['rtt'].max()), 2), 'stddev': round(float(response['rtt'].std()),2)}, ignore_index=True)
 
