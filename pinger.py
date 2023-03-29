@@ -71,7 +71,7 @@ def sendOnePing(mySocket, destAddr, ID):
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     data = struct.pack("d", time.time())
     # Calculate the checksum on the data and the dummy header.
-    myChecksum = checksum(header + data)
+    myChecksum = checksum(binascii.hexlify(header + data).decode())
 
     # Get the right checksum, and put in the header
 
