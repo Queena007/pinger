@@ -114,7 +114,10 @@ def ping(host, timeout=1):
         ttl += 1
      
 
-        response = response.append({'bytes':8,'rtt':delay,'ttl':ttl}, ignore_index=True)
+        if delay == -1:
+            print("Request timed out.")
+        else:
+            response = response.append({'bytes':8,'rtt':delay,'ttl':ttl}, ignore_index=True)
 
         #store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
         print(delay)
@@ -132,12 +135,9 @@ def ping(host, timeout=1):
 
     #You should have the values of delay for each ping here structured in a pandas dataframe;
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
-    
-    
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars.append({'min': round(float(response['rtt'].min()), 2), 'avg': round(float(response['rtt'].mean()), 2), 'max': round(float(response['rtt'].max()), 2), 'stddev': round(float(response['rtt'].std()), 2)}, ignore_index=True)
-
-    
+    if len(response) > 0:
+        vars = vars.append({'min':str(round(response['rtt'].min(), 2)), 'avg':str(round(response['rtt'].mean(), 2)),'max':str(round(response['rtt'].max(), 2)), 'stddev':str(round(response['rtt'].std(),2))}, ignore_index=True)
     print (vars) #make sure your vars data you are returning resembles acceptance criteria
     return vars
 
