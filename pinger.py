@@ -6,8 +6,6 @@ import time
 import select
 import binascii
 import pandas as pd
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
 
 ICMP_ECHO_REQUEST = 8
 
@@ -49,6 +47,13 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # Fill in start
 
         # Fetch the ICMP header from the IP packet
+        icmpHeader = recPacket[20:28]
+        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
+   
+        if type != 8 and packetID == ID:
+            bytesInDouble = struct.calcsize("d")
+            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
+            return timeReceived - timeSent
 
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
@@ -96,34 +101,35 @@ def doOnePing(destAddr, timeout):
     return delay
 
 def ping(host, timeout=1):
-    # timeout=1 means: If one second goes by without a reply from the server,   
+    # timeout=1 means: If one second goes by without a reply from the server,  
     # the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
     print("\nPinging " + dest + " using Python:")
     print("")
-    
+   
     response = pd.DataFrame(columns=['bytes','rtt','ttl']) #This creates an empty dataframe with 3 headers with the column specific names declared
-    
+   
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    
+    ttl=0
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
-        delay, statistics = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        response = #store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
-        print(delay) 
+        delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
+        ttl+=1
+        response = response.append({'bytes':8,'rtt':delay,'ttl':ttl},ignore_index=True)#store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        print(delay)
         time.sleep(1)  # wait one second
-    
+   
     packet_lost = 0
     packet_recv = 0
     #fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows():
-        if ???? == 0: #access your response df to determine if you received a packet or not
-            packet_lost = #????
+        if row['rtt'] == 0: #access your response df to determine if you received a packet or not
+            packet_lost = index
         else:
-            packet_recv = #????
+            packet_recv = row['ttl']
     #fill in end
 
-    #You should have the values of delay for each ping here structured in a pandas dataframe; 
+    #You should have the values of delay for each ping here structured in a pandas dataframe;
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
     vars = vars.append({'min':str(round(response['rtt'].min(), 2)), 'avg':str(round(response['rtt'].mean(), 2)),'max':str(round(response['rtt'].max(), 2)), 'stddev':str(round(response['rtt'].std(),2))}, ignore_index=True)
