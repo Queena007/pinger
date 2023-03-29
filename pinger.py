@@ -113,12 +113,14 @@ def ping(host, timeout=1):
    
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    ttl=0
+    ttl = 0
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay,statistics = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        ttl+=1
+        ttl += 1
      
         response = response.append({'bytes':8,'rtt':delay,'ttl':str(ttl)},ignore_index=True)
+
+
 
         #store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
         print(delay)
