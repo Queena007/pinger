@@ -52,7 +52,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         icmpHeader = recPacket[20:28]
         icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
    
-        if type != 8 and packetID == ID:
+        if icmpType != 8 and packetID == ID:
             bytesInDouble = struct.calcsize("d")
             timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
             return timeReceived - timeSent
@@ -118,9 +118,8 @@ def ping(host, timeout=1):
         delay,statistics = doOnePing(dest, timeout) #what is stored into delay and statistics?
         ttl += 1
      
-        response = response.append({'bytes':8,'rtt':delay,'ttl':str(ttl)},ignore_index=True)
 
-
+        response = response.append({'bytes':8,'rtt':delay,'ttl':ttl}, ignore_index=True)
 
         #store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
         print(delay)
