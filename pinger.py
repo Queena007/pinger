@@ -48,11 +48,11 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         
 
         # Fetch the ICMP header from the IP packet
-        icmpHeader = recPacket[20;28]
-        icmpType,code,mychecksum,packetID,sequence = struct.unpack("bbHHh",icmpHeader)
+        icmpHeader = recPacket[20:28]
+        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
         if type != 8 and packetID == ID:
             bytesInDouble = struct.calcsize("d")
-            timeSent = struct.unpack("d",recPacket[28:28 + bytesInDouble])[0]
+            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
             return timeReceived - timeSent
         
 
@@ -112,6 +112,13 @@ def ping(host, timeout=1):
     
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
+    
+    while 1:
+        delay = doOnePing(dest, timeout)
+        pring (delay)
+        time.sleep(1)
+        #one second
+    Return delay
     
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay, statistics = doOnePing(dest, timeout) #what is stored into delay and statistics?
