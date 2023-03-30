@@ -141,16 +141,17 @@ def ping(host, timeout=1):
 
     #You should have the values of delay for each ping here structured in a pandas dataframe;
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
+    
+    
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    
-    if len(response) > 0:
-        
 
-        vars = vars.append({'min': round(float(response['rtt'].dropna().min()), 2), 'avg': round(float(response['rtt'].dropna().mean()), 2),'max': round(float(response['rtt'].dropna().max()), 2), 'stddev': round(float(response['rtt'].dropna().std()),2)}, ignore_index=True)
+if len(response) > 0:
+    rtt = response['rtt'].dropna()
+    if len(rtt) > 0:
+        vars = vars.append({'min': round(float(rtt.min()), 2), 'avg': round(float(rtt.mean()), 2),
+                            'max': round(float(rtt.max()), 2), 'stddev': round(float(rtt.std()), 2)}, ignore_index=True)
 
-    
-    
-    print (vars) #make sure your vars data you are returning resembles acceptance criteria
+print(vars) #make sure your vars data you are returning resembles acceptance criteria
     return vars
 
 if __name__ == '__main__':
