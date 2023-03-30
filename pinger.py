@@ -1,3 +1,4 @@
+
 from socket import *
 import os
 import sys
@@ -17,13 +18,13 @@ def checksum(string):
     count = 0
 
     while count < countTo:
-        thisVal = ord(string[count + 1]) * 256 + ord(string[count])
+        thisVal = (string[count + 1]) * 256 + (string[count])
         csum += thisVal
         csum &= 0xffffffff
         count += 2
 
     if countTo < len(string):
-        csum += ord(string[len(string) - 1])
+        csum += (string[len(string) - 1])
         csum &= 0xffffffff
 
     csum = (csum >> 16) + (csum & 0xffff)
@@ -37,7 +38,7 @@ def checksum(string):
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
 
-    while 1:
+    while timeLeft > 0:
         startedSelect = time.time()
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
@@ -74,9 +75,9 @@ def sendOnePing(mySocket, destAddr, ID):
 
     # Get the right checksum, and put in the header
     if sys.platform == 'darwin':
-        myChecksum = socket.htons(myChecksum) & 0xffff
+        myChecksum = htons(myChecksum) & 0xffff
     else:
-        myChecksum = socket.htons(myChecksum)
+        myChecksum = htons(myChecksum)
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
@@ -88,19 +89,24 @@ def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
     # SOCK_RAW is a powerful socket type. For more details:   https://sock-raw.org/papers/sock_raw
-    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+    mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
   
     myID = os.getpid() & 0xFFFF  # Return the current process i
     sendOnePing(mySocket, destAddr, myID)
     delay = receiveOnePing(mySocket, myID, timeout, destAddr)
     mySocket.close()
-    return delay
+    
+    #check whether the delay is a string or a float
+    if isinstance(delay, string):
+        return -1
+    else:
+        return delay
 
 def ping(host, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,  
     # the client assumes that either the client's ping or the server's pong is lost
-    dest = socket.gethostbyname(host)
+    dest = gethostbyname(host)
     print("\nPinging " + dest + " using Python:")
     print("")
    
@@ -108,11 +114,10 @@ def ping(host, timeout=1):
    
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-  
+    ttl = 0
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
-        while 1:
         delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        
+        ttl += 1
      
 
         if delay == -1:
