@@ -1,5 +1,3 @@
-How to fix the problem "Test Failed: could not convert string to float: 'Request timed out.'" of python program of the following: 
-
 from socket import *
 import os
 import sys
@@ -19,13 +17,13 @@ def checksum(string):
     count = 0
 
     while count < countTo:
-        thisVal = (string[count + 1]) * 256 + (string[count])
+        thisVal = ord(string[count + 1]) * 256 + ord(string[count])
         csum += thisVal
         csum &= 0xffffffff
         count += 2
 
     if countTo < len(string):
-        csum += (string[len(string) - 1])
+        csum += ord(string[len(string) - 1])
         csum &= 0xffffffff
 
     csum = (csum >> 16) + (csum & 0xffff)
@@ -39,7 +37,7 @@ def checksum(string):
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
 
-    while timeLeft > 0:
+    while 1:
         startedSelect = time.time()
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
@@ -76,9 +74,9 @@ def sendOnePing(mySocket, destAddr, ID):
 
     # Get the right checksum, and put in the header
     if sys.platform == 'darwin':
-        myChecksum = htons(myChecksum) & 0xffff
+        myChecksum = socket.htons(myChecksum) & 0xffff
     else:
-        myChecksum = htons(myChecksum)
+        myChecksum = socket.htons(myChecksum)
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
@@ -86,25 +84,23 @@ def sendOnePing(mySocket, destAddr, ID):
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
 
-
-
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
     # SOCK_RAW is a powerful socket type. For more details:   https://sock-raw.org/papers/sock_raw
-    mySocket = socket(AF_INET, SOCK_RAW, icmp)
+    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
 
   
     myID = os.getpid() & 0xFFFF  # Return the current process i
     sendOnePing(mySocket, destAddr, myID)
     delay = receiveOnePing(mySocket, myID, timeout, destAddr)
     mySocket.close()
-    return delay if isinstance(delay, float) else -1
+    return delay
 
 def ping(host, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,  
     # the client assumes that either the client's ping or the server's pong is lost
-    dest = gethostbyname(host)
+    dest = socket.gethostbyname(host)
     print("\nPinging " + dest + " using Python:")
     print("")
    
@@ -112,11 +108,13 @@ def ping(host, timeout=1):
    
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    ttl = 0
+  
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
+        while 1:
         delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        ttl += 1
+        
      
+
         if delay == -1:
             print("Request timed out.")
         else:
@@ -140,9 +138,6 @@ def ping(host, timeout=1):
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
     
-    valid_responses = response[response['rtt'] > 0] #filter out timeouts
-  
-
     if len(response) > 0:
         vars = vars.append({'min': round(float(response['rtt'].min()), 2), 'avg': round(float(response['rtt'].mean()), 2),'max': round(float(response['rtt'].max()), 2), 'stddev': round(float(response['rtt'].std()),2)}, ignore_index=True)
 
