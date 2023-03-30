@@ -144,7 +144,9 @@ def ping(host, timeout=1):
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
     
     if len(response) > 0:
-        vars = vars.append({'min': round(float(response['rtt'].min()), 2), 'avg': round(float(response['rtt'].mean()), 2),'max': round(float(response['rtt'].max()), 2), 'stddev': round(float(response['rtt'].std()),2)}, ignore_index=True)
+        
+
+        vars = vars.append({'min': round(float(response['rtt'].dropna().min()), 2), 'avg': round(float(response['rtt'].dropna().mean()), 2),'max': round(float(response['rtt'].dropna().max()), 2), 'stddev': round(float(response['rtt'].dropna().std()),2)}, ignore_index=True)
 
     
     
