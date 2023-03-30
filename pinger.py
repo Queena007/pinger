@@ -98,7 +98,7 @@ def doOnePing(destAddr, timeout):
     mySocket.close()
     
     #check whether the delay is a string or a float
-    if isinstance(delay, string):
+    if isinstance(delay, str):
         return -1
     else:
         return delay
