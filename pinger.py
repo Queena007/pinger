@@ -39,7 +39,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []:  # Timeout
-            return "Request timed out."
+            return "Request timed out.", None
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
@@ -53,12 +53,12 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         if type != 8 and packetID == ID:
             bytesInDouble = struct.calcsize("d")
             timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived - timeSent
+            return timeReceived – timeSent, ttl
 
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
-            return "Request timed out."
+            return "Request timed out.", None
 
 def sendOnePing(mySocket, destAddr, ID):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
@@ -113,11 +113,13 @@ def ping(host, timeout=1):
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
     ttls = []
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
-        delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        response = response.append({'bytes':8,'rtt':delay,'ttl':ttl},ignore_index=True)#store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
-        
-        print(delay)
-        time.sleep(1)  # wait one second
+        delay, ttl = doOnePing(dest, timeout) #what is stored into delay and statistics?
+        If delay == “Request timed out.”:
+               print(delay)
+       else:
+        response = response.append({'bytes': 8, 'rtt': delay, 'ttl': ttl}, ignore_index=True)
+        print("Received {} bytes, rtt = {:.6f} ms, ttl = {}".format(8, delay, ttl))
+    time.sleep(1)  # wait one second
    
     packet_lost = 0
     packet_recv = 0
