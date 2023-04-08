@@ -4,7 +4,6 @@ import sys
 import struct
 import time
 import select
-import binascii
 import pandas as pd
 
 ICMP_ECHO_REQUEST = 8
@@ -43,18 +42,20 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
-        # Fill in start
+
+        # Fetch the IP header from the packet
+        ipHeader = recPacket[:20]
+        _, _, _, _, _, _, ttl, _, _, _, _ = struct.unpack("!BBHHHBBHII", ipHeader)
 
         # Fetch the ICMP header from the IP packet
         icmpHeader = recPacket[20:28]
         icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
-   
-        if type != 8 and packetID == ID:
+
+        if icmpType != 8 and packetID == ID:
             bytesInDouble = struct.calcsize("d")
             timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived – timeSent, ttl
+            return timeReceived - timeSent, ttl
 
-        # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
             return "Request timed out.", None
@@ -73,31 +74,27 @@ def sendOnePing(mySocket, destAddr, ID):
     # Get the right checksum, and put in the header
 
     if sys.platform == 'darwin':
-        # Convert 16-bit integers from host to network  byte order
+        # Convert 16-bit integers from host to network byte order
         myChecksum = htons(myChecksum) & 0xffff
     else:
         myChecksum = htons(myChecksum)
 
-
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
 
-    mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
-
-    # Both LISTS and TUPLES consist of a number of objects
-    # which can be referenced by their position number within the object.
+        mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
-    # SOCK_RAW is a powerful socket type. For more details:   https://sock-raw.org/papers/sock_raw
+    # SOCK_RAW is a powerful socket type. For more details: https://sock-raw.org/papers/sock_raw
     mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
     myID = os.getpid() & 0xFFFF  # Return the current process i
     sendOnePing(mySocket, destAddr, myID)
-    delay = receiveOnePing(mySocket, myID, timeout, destAddr)
+    delay, ttl = receiveOnePing(mySocket, myID, timeout, destAddr)
     mySocket.close()
-    return delay
+    return delay, ttl
 
 def ping(host, timeout=1):
     # timeout=1 means: If one second goes by without a reply from the server,  
@@ -105,55 +102,49 @@ def ping(host, timeout=1):
     dest = gethostbyname(host)
     print("\nPinging " + dest + " using Python:")
     print("")
-   
-    response = pd.DataFrame(columns=['bytes','rtt','ttl']) #This creates an empty dataframe with 3 headers with the column specific names declared
-   
-    #Send ping requests to a server separated by approximately one second
-    #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    ttls = []
-    for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
-        delay, ttl = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        If delay == “Request timed out.”:
-               print(delay)
-       else:
-        response = response.append({'bytes': 8, 'rtt': delay, 'ttl': ttl}, ignore_index=True)
-        print("Received {} bytes, rtt = {:.6f} ms, ttl = {}".format(8, delay, ttl))
-    time.sleep(1)  # wait one second
-   
+
+    response = pd.DataFrame(columns=['bytes', 'rtt', 'ttl'])
+
+    # Send ping requests to a server separated by approximately one second
+    for i in range(0, 4):
+        delay, ttl = doOnePing(dest, timeout)
+        if delay is None or ttl is None:
+            print("Request timed out.")
+        else:
+            response = response.append({'bytes': 8, 'rtt': delay * 1000, 'ttl': ttl}, ignore_index=True)
+            print("Received {} bytes, rtt = {:.6f} ms, ttl = {}".format(8, delay * 1000, ttl))
+        time.sleep(1)  # wait one second
+
     packet_lost = 0
     packet_recv = 0
 
-    #fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows():
-        if row['rtt'] == 0: #access your response df to determine if you received a packet or not
+        if row['rtt'] == 0:
             packet_lost += 1
         else:
             packet_recv += 1
-            ttls.append(delay*1000)
-    #fill in end
-    
+
     print("--- {} ping statistics ---".format(host))
-    print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost,packet_recv,packet_lost*25))
-  
-    #You should have the values of delay for each ping here structured in a pandas dataframe;
-    #fill in calculation for packet_min, packet_avg, packet_max, and stdev
+    print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost + packet_recv, packet_recv, packet_lost / (packet_lost + packet_recv) * 100))
+
     packet_min = 0
     packet_avg = 0.0
     packet_max = 0
     stdev = 0
 
     if packet_recv > 0:
-      packet_min = round(ttls.min(), 2)
-      packet_max = round(ttls.max(), 2)
-      packet_avg = round(ttls.mean(),2)
-      stdev = round(ttls.std(),2)
+        packet_min = round(response['rtt'].min(), 2)
+        packet_max = round(response['rtt'].max(), 2)
+        packet_avg = round(response['rtt'].mean(), 2)
+        stdev = round(response['rtt'].std(), 2)
 
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars.append({'min':str(packet_min), 'avg':str(packet_avg),'max':str(packet_max), 'stddev':str(stdev)}, ignore_index=True)
-    print (vars) #make sure your vars data you are returning resembles acceptance criteria
+    vars = vars.append({'min': str(packet_min), 'avg': str(packet_avg), 'max': str(packet_max), 'stddev': str(stdev)}, ignore_index=True)
+    print(vars)
     return vars
 
 if __name__ == '__main__':
-  ping("google.com")
-  ping("nyu.edu")
+    ping("google.com")
+    ping("nyu.edu")
+
 
