@@ -45,7 +45,8 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         # Fetch the IP header from the packet
         ipHeader = recPacket[:20]
-        _, _, _, _, _, _, ttl, _, _, _, _ = struct.unpack("!BBHHHBBHII", ipHeader)
+        _, _, _, _, _, ttl, _, _, _, _ = struct.unpack("!BBHHHBBHII", ipHeader)
+
 
         # Fetch the ICMP header from the IP packet
         icmpHeader = recPacket[20:28]
