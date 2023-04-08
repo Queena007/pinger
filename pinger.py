@@ -43,7 +43,6 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
-
         # Fill in start
 
         # Fetch the ICMP header from the IP packet
