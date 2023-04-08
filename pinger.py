@@ -82,7 +82,7 @@ def sendOnePing(mySocket, destAddr, ID):
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
 
-        mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
+    mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
@@ -146,5 +146,3 @@ def ping(host, timeout=1):
 if __name__ == '__main__':
     ping("google.com")
     ping("nyu.edu")
-
-
