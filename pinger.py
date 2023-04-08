@@ -111,30 +111,48 @@ def ping(host, timeout=1):
    
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-    ttl=0
+    ttls = []
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        ttl+=1
         response = response.append({'bytes':8,'rtt':delay,'ttl':ttl},ignore_index=True)#store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        
         print(delay)
         time.sleep(1)  # wait one second
    
     packet_lost = 0
     packet_recv = 0
+
     #fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows():
         if row['rtt'] == 0: #access your response df to determine if you received a packet or not
-            packet_lost = index
+            packet_lost += 1
         else:
-            packet_recv = row['ttl']
+            packet_recv += 1
+            ttls.append(delay*1000)
     #fill in end
-
+    
+    print("--- {} ping statistics ---".format(host))
+    print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost,packet_recv,packet_lost*25))
+  
     #You should have the values of delay for each ping here structured in a pandas dataframe;
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
+    packet_min = 0
+    packet_avg = 0.0
+    packet_max = 0
+    stdev = 0
+
+    if packet_recv > 0:
+      packet_min = round(ttls.min(), 2)
+      packet_max = round(ttls.max(), 2)
+      packet_avg = round(ttls.mean(),2)
+      stdev = round(ttls.std(),2)
+
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars.append({'min':str(round(response['rtt'].min(), 2)), 'avg':str(round(response['rtt'].mean(), 2)),'max':str(round(response['rtt'].max(), 2)), 'stddev':str(round(response['rtt'].std(),2))}, ignore_index=True)
+    vars = vars.append({'min':str(packet_min), 'avg':str(packet_avg),'max':str(packet_max), 'stddev':str(stdev)}, ignore_index=True)
     print (vars) #make sure your vars data you are returning resembles acceptance criteria
     return vars
 
 if __name__ == '__main__':
-    ping("google.com")
+  ping("google.com")
+  ping("nyu.edu")
+
