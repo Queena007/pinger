@@ -6,7 +6,7 @@ import time
 import select
 import binascii
 import pandas as pd
-import numpy as np
+
 
 ICMP_ECHO_REQUEST = 8
 
@@ -52,7 +52,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         bytesIndouble = 0
       
         type, code, checksum, id, sequence = struct.unpack('bbHHh',icmpHeader)
-        print(recPacket)
+        
         if ID == id:
             bytesInDouble = struct.calcsize('d')
             timeData = struct.unpack('d',recPacket[28:28 + bytesInDouble])[0] 
@@ -159,7 +159,7 @@ def ping(host, timeout=1):
 
 if __name__ == '__main__':
     ping("google.com")
-    ping("nyu.edu")
+    
     
 
 
