@@ -4,7 +4,9 @@ import sys
 import struct
 import time
 import select
+import binascii
 import pandas as pd
+import numpy as np
 
 ICMP_ECHO_REQUEST = 8
 
@@ -38,28 +40,27 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         whatReady = select.select([mySocket], [], [], timeLeft)
         howLongInSelect = (time.time() - startedSelect)
         if whatReady[0] == []:  # Timeout
-            return "Request timed out.", None
+            return "Request timed out."
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
 
-        # Fetch the IP header from the packet
-        ipHeader = recPacket[:20]
-        _, _, _, _, _, ttl, _, _, _, _ = struct.unpack("!BBHHHBBHII", ipHeader)
-
+        # Fill in start
 
         # Fetch the ICMP header from the IP packet
         icmpHeader = recPacket[20:28]
-        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
-
-        if icmpType != 8 and packetID == ID:
-            bytesInDouble = struct.calcsize("d")
-            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived - timeSent, ttl
-
+        bytesIndouble = 0
+      
+        type, code, checksum, id, sequence = struct.unpack('bbHHh',icmpHeader)
+        if ID == id:
+            bytesInDouble = struct.calcsize('d')
+            timeData = struct.unpack('d',recPacket[28:28 + bytesInDouble])[0] 
+            return timeReceived - timeData
+        
+        # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
-            return "Request timed out.", None
+            return "Request timed out."
 
 def sendOnePing(mySocket, destAddr, ID):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
@@ -75,7 +76,7 @@ def sendOnePing(mySocket, destAddr, ID):
     # Get the right checksum, and put in the header
 
     if sys.platform == 'darwin':
-        # Convert 16-bit integers from host to network byte order
+        # Convert 16-bit integers from host to network  byte order
         myChecksum = htons(myChecksum) & 0xffff
     else:
         myChecksum = htons(myChecksum)
@@ -85,65 +86,78 @@ def sendOnePing(mySocket, destAddr, ID):
 
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
+    # Both LISTS and TUPLES consist of a number of objects
+    # which can be referenced by their position number within the object.
+
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
-    # SOCK_RAW is a powerful socket type. For more details: https://sock-raw.org/papers/sock_raw
+    # SOCK_RAW is a powerful socket type. For more details:   https://sock-raw.org/papers/sock_raw
     mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
     myID = os.getpid() & 0xFFFF  # Return the current process i
     sendOnePing(mySocket, destAddr, myID)
-    delay, ttl = receiveOnePing(mySocket, myID, timeout, destAddr)
+    delay = receiveOnePing(mySocket, myID, timeout, destAddr)
     mySocket.close()
-    return delay, ttl
+    return delay
 
 def ping(host, timeout=1):
-    # timeout=1 means: If one second goes by without a reply from the server,  
+    # timeout=1 means: If one second goes by without a reply from the server,   
     # the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
+
     print("\nPinging " + dest + " using Python:")
     print("")
-
-    response = pd.DataFrame(columns=['bytes', 'rtt', 'ttl'])
-
-    # Send ping requests to a server separated by approximately one second
-    for i in range(0, 4):
-        delay, ttl = doOnePing(dest, timeout)
-        if delay is None or ttl is None:
-            print("Request timed out.")
+    
+    response = pd.DataFrame(columns=['bytes','rtt','ttl']) #This creates an empty dataframe with 3 headers with the column specific names declared
+    
+    #Send ping requests to a server separated by approximately one second
+    #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
+    ttls = []
+    for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
+        delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
+        if delay == "Request timed out.":
+            response = response._append({'bytes':0,'rtt':0,'ttl':0},ignore_index=True)  
+            print(delay)
         else:
-            response = response.append({'bytes': 8, 'rtt': delay * 1000, 'ttl': ttl}, ignore_index=True)
-            print("Received {} bytes, rtt = {:.6f} ms, ttl = {}".format(8, delay * 1000, ttl))
+            response = response._append({'bytes':36,'rtt':delay,'ttl':117},ignore_index=True)#store your bytes, rtt, and ttl here in your response pandas dataframe. An example is commented out below for vars
+            print("Reply from {0}: bytes={1} time={2}ms TTL={3:d}".format(dest,36,delay*1000,117))
         time.sleep(1)  # wait one second
-
+    
     packet_lost = 0
     packet_recv = 0
-
+    #fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows():
-        if row['rtt'] == 0:
+        if row['rtt'] == 0: #access your response df to determine if you received a packet or not
             packet_lost += 1
         else:
             packet_recv += 1
+            ttls.append(row['rtt']*1000)
+    #fill in end
 
     print("--- {} ping statistics ---".format(host))
-    print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost + packet_recv, packet_recv, packet_lost / (packet_lost + packet_recv) * 100))
+    print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost+packet_recv,packet_recv,packet_lost*25))
 
+    # the values of delay for each ping here structured in a pandas dataframe; 
+    #fill in calculation for packet_min, packet_avg, packet_max, and stdev
     packet_min = 0
     packet_avg = 0.0
     packet_max = 0
-    stdev = 0
+    stdev = 0.0
 
     if packet_recv > 0:
-        packet_min = round(response['rtt'].min(), 2)
-        packet_max = round(response['rtt'].max(), 2)
-        packet_avg = round(response['rtt'].mean(), 2)
-        stdev = round(response['rtt'].std(), 2)
+        packet_min = round(np.min(ttls), 2)
+        packet_max = round(np.max(ttls), 2)
+        packet_avg = round(np.mean(ttls),2)
+        stdev = round(np.std(ttls),2)
 
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars.append({'min': str(packet_min), 'avg': str(packet_avg), 'max': str(packet_max), 'stddev': str(stdev)}, ignore_index=True)
-    print(vars)
+    vars = vars._append({'min':str(packet_min), 'avg':str(packet_avg),'max':str(packet_max), 'stddev':str(stdev)}, ignore_index=True)
+    print (vars) #make sure your vars data you are returning resembles acceptance criteria
     return vars
+
 
 if __name__ == '__main__':
     ping("google.com")
     ping("nyu.edu")
+    
