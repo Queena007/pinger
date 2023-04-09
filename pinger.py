@@ -6,7 +6,6 @@ import time
 import select
 import binascii
 import pandas as pd
-import numpy as np
 
 ICMP_ECHO_REQUEST = 8
 
@@ -49,14 +48,13 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         # Fetch the ICMP header from the IP packet
         icmpHeader = recPacket[20:28]
-        bytesIndouble = 0
-      
-        type, code, checksum, id, sequence = struct.unpack('bbHHh',icmpHeader)
-        if ID == id:
-            bytesInDouble = struct.calcsize('d')
-            timeData = struct.unpack('d',recPacket[28:28 + bytesInDouble])[0] 
-            return timeReceived - timeData
-        
+        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
+   
+        if packetID == ID:
+            bytesInDouble = struct.calcsize("d")
+            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
+            return timeReceived - timeSent
+
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -102,43 +100,40 @@ def doOnePing(destAddr, timeout):
     return delay
 
 def ping(host, timeout=1):
-    # timeout=1 means: If one second goes by without a reply from the server,   
+    # timeout=1 means: If one second goes by without a reply from the server,  
     # the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
-
     print("\nPinging " + dest + " using Python:")
     print("")
-    
+   
     response = pd.DataFrame(columns=['bytes','rtt','ttl']) #This creates an empty dataframe with 3 headers with the column specific names declared
-    
+   
     #Send ping requests to a server separated by approximately one second
     #Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
     ttls = []
     for i in range(0,4): #Four pings will be sent (loop runs for i=0, 1, 2, 3)
         delay = doOnePing(dest, timeout) #what is stored into delay and statistics?
-        if delay == "Request timed out.":
-            response = response._append({'bytes':0,'rtt':0,'ttl':0},ignore_index=True)  
-            print(delay)
-        else:
-            response = response._append({'bytes':36,'rtt':delay,'ttl':117},ignore_index=True)#store your bytes, rtt, and ttl here in your response pandas dataframe. An example is commented out below for vars
-            print("Reply from {0}: bytes={1} time={2}ms TTL={3:d}".format(dest,36,delay*1000,117))
+        response = response.append({'bytes':36,'rtt':delay,'ttl':117},ignore_index=True)#store your bytes, rtt, and ttle here in your response pandas dataframe. An example is commented out below for vars
+        
+        print(delay)
         time.sleep(1)  # wait one second
-    
+   
     packet_lost = 0
     packet_recv = 0
+
     #fill in start. UPDATE THE QUESTION MARKS
     for index, row in response.iterrows():
         if row['rtt'] == 0: #access your response df to determine if you received a packet or not
             packet_lost += 1
         else:
             packet_recv += 1
-            ttls.append(row['rtt']*1000)
+            ttls.append(delay*1000)
     #fill in end
-
-    print("--- {} ping statistics ---".format(host))
+    
+    print("\n--- {} ping statistics ---".format(host))
     print("{0:1d} packets transmitted, {1:1d} packets received, {2:.1f}% packet loss".format(packet_lost+packet_recv,packet_recv,packet_lost*25))
-
-    # the values of delay for each ping here structured in a pandas dataframe; 
+  
+    #have the values of delay for each ping here structured in a pandas dataframe;
     #fill in calculation for packet_min, packet_avg, packet_max, and stdev
     packet_min = 0
     packet_avg = 0.0
@@ -146,18 +141,16 @@ def ping(host, timeout=1):
     stdev = 0.0
 
     if packet_recv > 0:
-        packet_min = round(np.min(ttls), 2)
-        packet_max = round(np.max(ttls), 2)
-        packet_avg = round(np.mean(ttls),2)
-        stdev = round(np.std(ttls),2)
+      packet_min = round(ttls.min(), 2)
+      packet_max = round(ttls.max(), 2)
+      packet_avg = round(ttls.mean(),2)
+      stdev = round(ttls.std(),2)
 
     vars = pd.DataFrame(columns=['min', 'avg', 'max', 'stddev'])
-    vars = vars._append({'min':str(packet_min), 'avg':str(packet_avg),'max':str(packet_max), 'stddev':str(stdev)}, ignore_index=True)
+    vars = vars.append({'min':str(packet_min), 'avg':str(packet_avg),'max':str(packet_max), 'stddev':str(stdev)}, ignore_index=True)
     print (vars) #make sure your vars data you are returning resembles acceptance criteria
     return vars
 
-
 if __name__ == '__main__':
-    ping("google.com")
-    ping("nyu.edu")
-    
+  ping("google.com")
+  ping("nyu.edu")
